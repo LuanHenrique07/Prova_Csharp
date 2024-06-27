@@ -152,6 +152,19 @@ app.MapPut("/servicos/{id}", async (int id, Servico servico, LojaDbContext dbCon
 })
 .RequireAuthorization(); // Exige autorização JWT
 
+// Rota para consultar os dados de um serviço pelo ID
+app.MapGet("/servicos/{id}", async (int id, LojaDbContext dbContext) =>
+{
+    var servico = await dbContext.Servicos.FindAsync(id);
+    if (servico == null)
+    {
+        return Results.NotFound($"Serviço com ID {id} não encontrado.");
+    }
+
+    return Results.Ok(servico);
+})
+.RequireAuthorization(); // Exige autorização JWT
+
 // Configuração do Swagger (apenas em ambiente de desenvolvimento)
 if (app.Environment.IsDevelopment())
 {
