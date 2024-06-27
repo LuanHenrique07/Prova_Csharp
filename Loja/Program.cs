@@ -133,6 +133,25 @@ app.MapPost("/servicos", async (Servico servico, LojaDbContext dbContext) =>
 })
 .RequireAuthorization(); // Exige autorização JWT
 
+// Rota para atualizar os dados de um serviço
+app.MapPut("/servicos/{id}", async (int id, Servico servico, LojaDbContext dbContext) =>
+{
+    var existingServico = await dbContext.Servicos.FindAsync(id);
+    if (existingServico == null)
+    {
+        return Results.NotFound($"Serviço com ID {id} não encontrado.");
+    }
+
+    existingServico.Nome = servico.Nome;
+    existingServico.Preco = servico.Preco;
+    existingServico.Status = servico.Status;
+
+    await dbContext.SaveChangesAsync();
+
+    return Results.Ok(existingServico);
+})
+.RequireAuthorization(); // Exige autorização JWT
+
 // Configuração do Swagger (apenas em ambiente de desenvolvimento)
 if (app.Environment.IsDevelopment())
 {
