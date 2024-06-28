@@ -1,10 +1,8 @@
-using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Loja.models;
 
-namespace Loja.models
-{
-    public class Contrato
+public class Contrato
     {
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -21,5 +19,7 @@ namespace Loja.models
 
         [Required]
         public DateTime DataContratacao { get; set; }
+
+        [ForeignKey("ServicoId")]
+        public Servico Servico { get; set; }
     }
-}

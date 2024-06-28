@@ -15,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Configuração da conexão com o banco de dados
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<LojaDbContext>(options =>
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 37))));
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 34))));
 
 // Configuração da autenticação JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -30,10 +30,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Serviço de Usuário
+// Registro dos serviços
 builder.Services.AddScoped<UsuarioService>();
-
-// Serviço de Contrato
 builder.Services.AddScoped<ContratoService>();
 
 // Configuração do Swagger
@@ -136,8 +134,38 @@ app.MapPost("/servicos", async (Servico servico, LojaDbContext dbContext) =>
 })
 .RequireAuthorization(); // Exige autorização JWT
 
-// Rota para registrar um novo contrato
-app.MapPost("/contratos", async (Contrato contrato, ContratoService contratoService, LojaDbContext dbContext) =>
+// Rota para atualizar os dados de um serviço
+app.MapPut("/servicos/{id}", async (int id, Servico servico, LojaDbContext dbContext) =>
+{
+    var servicoExistente = await dbContext.Servicos.FindAsync(id);
+    if (servicoExistente == null)
+    {
+        return Results.NotFound($"Serviço com ID {id} não encontrado.");
+    }
+
+    servicoExistente.Nome = servico.Nome;
+    servicoExistente.Preco = servico.Preco;
+    servicoExistente.Status = servico.Status;
+
+    await dbContext.SaveChangesAsync();
+    return Results.Ok(servicoExistente);
+})
+.RequireAuthorization(); // Exige autorização JWT
+
+// Rota para consultar os dados de um serviço a partir do ID
+app.MapGet("/servicos/{id}", async (int id, LojaDbContext dbContext) =>
+{
+    var servico = await dbContext.Servicos.FindAsync(id);
+    if (servico == null)
+    {
+        return Results.NotFound($"Serviço com ID {id} não encontrado.");
+    }
+    return Results.Ok(servico);
+})
+.RequireAuthorization(); // Exige autorização JWT
+
+// Rota para registrar um contrato
+app.MapPost("/contratos", async (Contrato contrato, LojaDbContext dbContext) =>
 {
     dbContext.Contratos.Add(contrato);
     await dbContext.SaveChangesAsync();
@@ -145,15 +173,22 @@ app.MapPost("/contratos", async (Contrato contrato, ContratoService contratoServ
 })
 .RequireAuthorization(); // Exige autorização JWT
 
-// Rota para consultar um contrato pelo ID
-app.MapGet("/contratos/{id}", async (int id, LojaDbContext dbContext) =>
+// Rota para consultar todos os serviços contratados por um cliente específico
+app.MapGet("/clientes/{clienteId}/servicos", async (int clienteId, LojaDbContext dbContext) =>
 {
-    var contrato = await dbContext.Contratos.FindAsync(id);
-    if (contrato == null)
-    {
-        return Results.NotFound($"Contrato com ID {id} não encontrado.");
-    }
-    return Results.Ok(contrato);
+    var servicosContratados = await dbContext.Contratos
+        .Where(c => c.ClienteId == clienteId)
+        .Select(c => new
+        {
+            c.Id,
+            c.ServicoId,
+            c.PrecoCobrado,
+            c.DataContratacao,
+            Servico = c.Servico // Incluir detalhes do serviço contratado
+        })
+        .ToListAsync();
+
+    return Results.Ok(servicosContratados);
 })
 .RequireAuthorization(); // Exige autorização JWT
 

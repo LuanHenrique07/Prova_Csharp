@@ -15,6 +15,7 @@ namespace Loja.models
         [Required]
         public decimal Preco { get; set; }
 
+        [Required]
         public bool Status { get; set; }
     }
 }
