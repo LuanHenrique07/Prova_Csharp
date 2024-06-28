@@ -8,5 +8,7 @@ namespace Loja.data
         public LojaDbContext(DbContextOptions<LojaDbContext> options) : base(options) { }
         public DbSet<Usuario> Usuarios { get; set; }
         public DbSet<Servico> Servicos { get; set; }
+
+        public DbSet<Contrato> Contratos { get; set; }
     }
 }

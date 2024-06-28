@@ -33,6 +33,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 // Serviço de Usuário
 builder.Services.AddScoped<UsuarioService>();
 
+// Serviço de Contrato
+builder.Services.AddScoped<ContratoService>();
+
 // Configuração do Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -133,35 +136,24 @@ app.MapPost("/servicos", async (Servico servico, LojaDbContext dbContext) =>
 })
 .RequireAuthorization(); // Exige autorização JWT
 
-// Rota para atualizar os dados de um serviço
-app.MapPut("/servicos/{id}", async (int id, Servico servico, LojaDbContext dbContext) =>
+// Rota para registrar um novo contrato
+app.MapPost("/contratos", async (Contrato contrato, ContratoService contratoService, LojaDbContext dbContext) =>
 {
-    var existingServico = await dbContext.Servicos.FindAsync(id);
-    if (existingServico == null)
-    {
-        return Results.NotFound($"Serviço com ID {id} não encontrado.");
-    }
-
-    existingServico.Nome = servico.Nome;
-    existingServico.Preco = servico.Preco;
-    existingServico.Status = servico.Status;
-
+    dbContext.Contratos.Add(contrato);
     await dbContext.SaveChangesAsync();
-
-    return Results.Ok(existingServico);
+    return Results.Created($"/contratos/{contrato.Id}", contrato);
 })
 .RequireAuthorization(); // Exige autorização JWT
 
-// Rota para consultar os dados de um serviço pelo ID
-app.MapGet("/servicos/{id}", async (int id, LojaDbContext dbContext) =>
+// Rota para consultar um contrato pelo ID
+app.MapGet("/contratos/{id}", async (int id, LojaDbContext dbContext) =>
 {
-    var servico = await dbContext.Servicos.FindAsync(id);
-    if (servico == null)
+    var contrato = await dbContext.Contratos.FindAsync(id);
+    if (contrato == null)
     {
-        return Results.NotFound($"Serviço com ID {id} não encontrado.");
+        return Results.NotFound($"Contrato com ID {id} não encontrado.");
     }
-
-    return Results.Ok(servico);
+    return Results.Ok(contrato);
 })
 .RequireAuthorization(); // Exige autorização JWT
 
