@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.IdentityModel.Tokens.Jwt;
@@ -15,7 +16,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Configuração da conexão com o banco de dados
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<LojaDbContext>(options =>
-    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 34))));
+    options.UseMySql(connectionString, new MySqlServerVersion(new Version(8, 0, 37))));
 
 // Configuração da autenticação JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -30,9 +31,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Registro dos serviços
+// Configuração do serviço de autorização
+builder.Services.AddAuthorization(); // Adicionando o serviço de autorização
+
+// Serviço de Usuário
 builder.Services.AddScoped<UsuarioService>();
-builder.Services.AddScoped<ContratoService>();
 
 // Configuração do Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -137,18 +140,18 @@ app.MapPost("/servicos", async (Servico servico, LojaDbContext dbContext) =>
 // Rota para atualizar os dados de um serviço
 app.MapPut("/servicos/{id}", async (int id, Servico servico, LojaDbContext dbContext) =>
 {
-    var servicoExistente = await dbContext.Servicos.FindAsync(id);
-    if (servicoExistente == null)
+    var existingServico = await dbContext.Servicos.FindAsync(id);
+    if (existingServico == null)
     {
         return Results.NotFound($"Serviço com ID {id} não encontrado.");
     }
 
-    servicoExistente.Nome = servico.Nome;
-    servicoExistente.Preco = servico.Preco;
-    servicoExistente.Status = servico.Status;
+    existingServico.Nome = servico.Nome;
+    existingServico.Preco = servico.Preco;
+    existingServico.Status = servico.Status;
 
     await dbContext.SaveChangesAsync();
-    return Results.Ok(servicoExistente);
+    return Results.Ok(existingServico);
 })
 .RequireAuthorization(); // Exige autorização JWT
 
@@ -160,6 +163,7 @@ app.MapGet("/servicos/{id}", async (int id, LojaDbContext dbContext) =>
     {
         return Results.NotFound($"Serviço com ID {id} não encontrado.");
     }
+
     return Results.Ok(servico);
 })
 .RequireAuthorization(); // Exige autorização JWT
@@ -173,7 +177,7 @@ app.MapPost("/contratos", async (Contrato contrato, LojaDbContext dbContext) =>
 })
 .RequireAuthorization(); // Exige autorização JWT
 
-// Rota para consultar todos os serviços contratados por um cliente específico
+// Rota para consultar todos os serviços contratados por um cliente
 app.MapGet("/clientes/{clienteId}/servicos", async (int clienteId, LojaDbContext dbContext) =>
 {
     var servicosContratados = await dbContext.Contratos
@@ -184,7 +188,7 @@ app.MapGet("/clientes/{clienteId}/servicos", async (int clienteId, LojaDbContext
             c.ServicoId,
             c.PrecoCobrado,
             c.DataContratacao,
-            Servico = c.Servico // Incluir detalhes do serviço contratado
+            Servico = c.Servico // Incluir detalhes do serviço contratado, se necessário
         })
         .ToListAsync();
 
